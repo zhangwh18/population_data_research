@@ -36,10 +36,6 @@ def compute_historical_tfr(census_df, macro_df, std_asfr):
     return hist_tfr
 
 def get_tfr_forecaster(hist_tfr, method='linear'):
-    """
-    返回一个可调用对象，输入年份返回该年的预测 TFR
-    method: 'linear' 或 'exp'（指数衰减）
-    """
     years = np.array(list(hist_tfr.keys()))
     values = np.array(list(hist_tfr.values()))
     if method == 'linear':
@@ -47,16 +43,30 @@ def get_tfr_forecaster(hist_tfr, method='linear'):
         slope, intercept = coeffs[0], coeffs[1]
         def predict(year):
             tfr = intercept + slope * year
-            return max(tfr, 0.5)   # 限制最低0.5
+            return max(tfr, 0.5)
         return predict
     elif method == 'exp':
         from scipy.optimize import curve_fit
+        import warnings
         def exp_func(x, a, b, c):
             return a * np.exp(b * x) + c
-        popt, _ = curve_fit(exp_func, years, values, p0=[1, -0.05, 0.5])
-        def predict(year):
-            return exp_func(year, *popt)
-        return predict
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings('error', category=UserWarning, module='scipy.optimize')
+                popt, _ = curve_fit(exp_func, years, values, p0=[1, -0.05, 0.5])
+        except (UserWarning, RuntimeError) as e:
+            # 拟合失败，回退到线性外推
+            print(f"指数拟合失败，回退到线性外推: {e}")
+            coeffs = np.polyfit(years, values, 1)
+            slope, intercept = coeffs[0], coeffs[1]
+            def predict(year):
+                tfr = intercept + slope * year
+                return max(tfr, 0.5)
+            return predict
+        else:
+            def predict(year):
+                return exp_func(year, *popt)
+            return predict
     else:
         raise ValueError(f"未知外推方法: {method}")
 

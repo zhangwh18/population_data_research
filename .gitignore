@@ -1,8 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Data (optional)
 data/raw/
 data/processed/
 results/
-__pycache__/
-*.pyc
-.vscode/
-.idea/
-*.log
+
+# Test coverage
+htmlcov/
+.coverage
+.pytest_cache/
